@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Search, Filter, Eye, Globe, Mail, Plus, MapPin, Users, TrendingUp, 
   Building, Phone, Star, ArrowUpDown, Download, BarChart3, PieChart,
   Target, Zap, ExternalLink, X, CheckCircle, AlertCircle,
   Calendar, DollarSign, Briefcase, Map, Database, Settings, Home
 } from 'lucide-react';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip, useMap } from 'react-leaflet';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 
 // TUTAJ WKLEJ POZOSTAŁE DANE - po const companies = [
@@ -712,62 +712,104 @@ const CRMApp = () => {
     </div>
   );
 
- const MapView = () => (
-  <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6">
-    <h2 className="text-2xl font-bold text-white mb-6">Mapa firm</h2>
+ const MapView = () => {
+  // mniejsze piny, minimalnie większe przy dużym zbliżeniu
+  const pinRadius = mapView.zoom >= 10 ? 7 : 5
+  const showLabelsFromZoom = 9 // od jakiego zoomu stałe etykiety
 
-    <FiltersBar />
+  return (
+    <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6">
+      <h2 className="text-2xl font-bold text-white mb-6">Mapa firm</h2>
 
-    <div className="relative rounded-xl overflow-hidden" style={{ height: '600px' }}>
-      <MapContainer
-        center={[52.1, 19.4]} // środek Polski
-        zoom={6}
-        scrollWheelZoom={true}
-        style={{ height: '100%', width: '100%' }}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; OpenStreetMap contributors"
-        />
-        {filteredCompanies
-          .filter((c) => typeof c.lat === 'number' && typeof c.lng === 'number')
-          .map((c) => (
-            <CircleMarker
-              key={c.id}
-              center={[c.lat, c.lng]}
-              pathOptions={{ color: c.type === 'klient' ? '#3B82F6' : '#A855F7' }} // niebieski=klient, fiolet=partner
-              radius={8}
-              eventHandlers={{ click: () => setSelectedModal(c) }}
-            >
-              <Popup>
-                <div style={{ minWidth: 180 }}>
+      <FiltersBar />
+
+      <div className="relative rounded-xl overflow-hidden" style={{ height: '600px' }}>
+        <MapContainer
+          center={mapView.center}
+          zoom={mapView.zoom}
+          scrollWheelZoom={true}
+          style={{ height: '100%', width: '100%' }}
+          whenCreated={(map) => {
+            mapRef.current = map
+            // zapisujemy widok po każdym przesunięciu/zbliżeniu
+            map.on('moveend', () => {
+              const c = map.getCenter()
+              setMapView({ center: [c.lat, c.lng], zoom: map.getZoom() })
+            })
+          }}
+        >
+          {/* przywrócenie ostatniego widoku na wypadek remountu */}
+          <SyncView center={mapView.center} zoom={mapView.zoom} />
+
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution="&copy; OpenStreetMap contributors"
+          />
+
+          {filteredCompanies
+            .filter((c) => typeof c.lat === 'number' && typeof c.lng === 'number')
+            .map((c) => (
+              <CircleMarker
+                key={c.id}
+                center={[c.lat, c.lng]}
+                pathOptions={{ color: c.type === 'klient' ? '#3B82F6' : '#A855F7' }}
+                radius={pinRadius}
+                eventHandlers={{ click: () => setSelectedModal(c) }}
+              >
+                {/* Hover tooltip – krótki podgląd */}
+                <Tooltip direction="top" offset={[0, -8]}>
                   <div style={{ fontWeight: 600 }}>{c.name}</div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>
+                  <div style={{ fontSize: 12, opacity: 0.85 }}>
                     {c.city}{c.region ? `, ${c.region}` : ''}
                   </div>
-                  <div style={{ marginTop: 6 }}>
-                    <button
-                      onClick={() => setSelectedModal(c)}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: 8,
-                        background: '#2563EB',
-                        color: 'white',
-                        border: 'none',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Szczegóły
-                    </button>
+                  {c.potential && (
+                    <div style={{ fontSize: 12, opacity: 0.85 }}>Potencjał: {c.potential}</div>
+                  )}
+                </Tooltip>
+
+                {/* Stała etykieta przy większym zoomie */}
+                {mapView.zoom >= showLabelsFromZoom && (
+                  <Tooltip
+                    permanent
+                    direction="bottom"
+                    offset={[0, 10]}
+                    className="marker-label"
+                  >
+                    {c.name}
+                  </Tooltip>
+                )}
+
+                {/* Popup (klik) – możesz zostawić lub usunąć, bo masz modal */}
+                <Popup>
+                  <div style={{ minWidth: 180 }}>
+                    <div style={{ fontWeight: 600 }}>{c.name}</div>
+                    <div style={{ fontSize: 12, opacity: 0.8 }}>
+                      {c.city}{c.region ? `, ${c.region}` : ''}
+                    </div>
+                    <div style={{ marginTop: 6 }}>
+                      <button
+                        onClick={() => setSelectedModal(c)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          background: '#2563EB',
+                          color: 'white',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Szczegóły
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </CircleMarker>
-          ))}
-      </MapContainer>
+                </Popup>
+              </CircleMarker>
+            ))}
+        </MapContainer>
+      </div>
     </div>
-  </div>
-);
+  )
+}
 
   const StrategyView = () => (
     <div className="space-y-6">
