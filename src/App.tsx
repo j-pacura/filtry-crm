@@ -712,43 +712,62 @@ const CRMApp = () => {
     </div>
   );
 
-  const MapView = () => (
-    <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6">
-      <h2 className="text-2xl font-bold text-white mb-6">Mapa firm</h2>
-      
-      <FiltersBar />
-      
-      <div className="relative bg-gray-900 rounded-xl overflow-hidden" style={{ height: '600px' }}>
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20" />
-        
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <MapPin className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Interaktywna mapa</h3>
-            <p className="text-gray-300 max-w-md">
-              Tutaj będzie wyświetlana mapa Polski z pinami firm. Różne kolory pinów dla klientów i partnerów.
-              Kliknięcie w pin otwiera modal ze szczegółami firmy.
-            </p>
-            <div className="mt-4 flex justify-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-blue-500 rounded-full" />
-                <span className="text-sm text-gray-300">Klienci</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-purple-500 rounded-full" />
-                <span className="text-sm text-gray-300">Partnerzy</span>
-              </div>
-            </div>
-          </div>
-        </div>
+ const MapView = () => (
+  <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6">
+    <h2 className="text-2xl font-bold text-white mb-6">Mapa firm</h2>
 
-        {/* Symulowane piny */}
-        <div className="absolute top-1/3 left-1/3 w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-        <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-purple-500 rounded-full animate-pulse" />
-        <div className="absolute bottom-1/3 right-1/3 w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-      </div>
+    <FiltersBar />
+
+    <div className="relative rounded-xl overflow-hidden" style={{ height: '600px' }}>
+      <MapContainer
+        center={[52.1, 19.4]} // środek Polski
+        zoom={6}
+        scrollWheelZoom={true}
+        style={{ height: '100%', width: '100%' }}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="&copy; OpenStreetMap contributors"
+        />
+        {filteredCompanies
+          .filter((c) => typeof c.lat === 'number' && typeof c.lng === 'number')
+          .map((c) => (
+            <CircleMarker
+              key={c.id}
+              center={[c.lat, c.lng]}
+              pathOptions={{ color: c.type === 'klient' ? '#3B82F6' : '#A855F7' }} // niebieski=klient, fiolet=partner
+              radius={8}
+              eventHandlers={{ click: () => setSelectedModal(c) }}
+            >
+              <Popup>
+                <div style={{ minWidth: 180 }}>
+                  <div style={{ fontWeight: 600 }}>{c.name}</div>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>
+                    {c.city}{c.region ? `, ${c.region}` : ''}
+                  </div>
+                  <div style={{ marginTop: 6 }}>
+                    <button
+                      onClick={() => setSelectedModal(c)}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: 8,
+                        background: '#2563EB',
+                        color: 'white',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Szczegóły
+                    </button>
+                  </div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          ))}
+      </MapContainer>
     </div>
-  );
+  </div>
+);
 
   const StrategyView = () => (
     <div className="space-y-6">
