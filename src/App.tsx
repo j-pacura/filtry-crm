@@ -300,7 +300,43 @@ return (
             <X className="w-6 h-6" />
           </button>
         </div>
-        
+        <div className="mt-3 flex items-center gap-3">
+  <div className="flex items-center gap-2">
+    <span className="text-xs text-gray-400">Status:</span>
+    <select
+      value={company.status || 'potential'}
+      onChange={(e) => updateStatus(e.target.value)}
+      className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-sm text-white"
+    >
+      <option value="potential">Potencjalny</option>
+      <option value="contacted">Podjęto kontakt</option>
+      <option value="meeting">Spotkanie</option>
+      <option value="offer">Oferta</option>
+      <option value="active">Aktywny</option>
+      <option value="returning">Powracający</option>
+      <option value="lost">Odrzucił ofertę</option>
+    </select>
+    {statusSaving && <span className="text-xs text-gray-400">zapisywanie…</span>}
+  </div>
+
+  <div className="flex-1" />
+
+  <div>
+    {company.owner_id ? (
+      <span className="px-2 py-1 text-xs rounded bg-gray-800 border border-gray-700 text-gray-200">
+        Przypisane: {currentUserId && company.owner_id === currentUserId ? 'Ty' : 'inny użytkownik'}
+      </span>
+    ) : (
+      <button
+        onClick={claimCompany}
+        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm"
+      >
+        Przypisz do mnie
+      </button>
+    )}
+  </div>
+</div>
+
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -379,6 +415,55 @@ return (
             </div>
           </div>
 
+  <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+  <div className="flex items-center justify-between mb-3">
+    <h3 className="text-sm font-semibold text-gray-300">Notatki</h3>
+    <label className="flex items-center gap-2 text-xs text-gray-300">
+      <input
+        type="checkbox"
+        checked={notePublic}
+        onChange={(e) => setNotePublic(e.target.checked)}
+        className="accent-blue-600"
+      />
+      Udostępnij zespołowi
+    </label>
+  </div>
+
+  <div className="flex gap-2 mb-4">
+    <input
+      value={noteText}
+      onChange={(e) => setNoteText(e.target.value)}
+      placeholder="Krótka notatka z kontaktu…"
+      className="flex-1 px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+    />
+    <button
+      onClick={addNote}
+      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+    >
+      Dodaj
+    </button>
+  </div>
+
+  <div className="space-y-2 max-h-48 overflow-y-auto">
+    {notes.map(n => (
+      <div key={n.id} className="p-2 bg-gray-900/60 border border-gray-800 rounded-lg">
+        <div className="text-gray-200 text-sm">{n.body}</div>
+        <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+          <span>{new Date(n.created_at).toLocaleString()}</span>
+          <span className={`px-2 py-0.5 rounded-full ${n.is_public
+              ? 'bg-blue-600/20 text-blue-300 border border-blue-600/30'
+              : 'bg-gray-700 text-gray-300 border border-gray-600/30'}`}>
+            {n.is_public ? 'publiczna' : 'prywatna'}
+          </span>
+        </div>
+      </div>
+    ))}
+    {notes.length === 0 && (
+      <div className="text-sm text-gray-500">Brak notatek.</div>
+    )}
+  </div>
+</div>
+          
           <button 
             onClick={() => addToReport(company)}
             className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
