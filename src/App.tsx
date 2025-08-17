@@ -211,7 +211,75 @@ const CRMApp = () => {
     </nav>
   );
 
-  const CompanyModal = ({ company, onClose }) => (
+ const CompanyModal = ({ company, onClose }) => {
+     // === UŻYTKOWNIK (do claim) ===
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null))
+  }, [])
+
+  // === STATUS firmy ===
+  const [statusSaving, setStatusSaving] = useState(false)
+  const updateStatus = async (newStatus: string) => {
+    setStatusSaving(true)
+    const { error } = await supabase
+      .from('companies')
+      .update({ status: newStatus })
+      .eq('id', company.id)
+    setStatusSaving(false)
+    if (!error) {
+      setCompanies(prev => prev.map(c => c.id === company.id ? { ...c, status: newStatus } : c))
+    }
+  }
+
+  // === PRZYPISZ DO MNIE (owner) ===
+  const claimCompany = async () => {
+    if (!currentUserId) return
+    const { error } = await supabase
+      .from('companies')
+      .update({ owner_id: currentUserId })
+      .eq('id', company.id)
+    if (!error) {
+      setCompanies(prev => prev.map(c => c.id === company.id ? { ...c, owner_id: currentUserId } : c))
+    }
+  }
+
+  // === NOTATKI (publiczne/prywatne) ===
+  const [noteText, setNoteText] = useState('')
+  const [notePublic, setNotePublic] = useState(false)
+  const [notes, setNotes] = useState<any[]>([])
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('company_id', company.id)
+        .order('created_at', { ascending: false })
+      setNotes(data ?? [])
+    })()
+  }, [company.id])
+
+  const addNote = async () => {
+    if (!noteText.trim() || !currentUserId) return
+    const { error } = await supabase.from('notes').insert({
+      company_id: company.id,
+      user_id: currentUserId,
+      body: noteText.trim(),
+      is_public: notePublic
+    })
+    if (!error) {
+      setNoteText('')
+      setNotePublic(false)
+      const { data } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('company_id', company.id)
+        .order('created_at', { ascending: false })
+      setNotes(data ?? [])
+    }
+  }
+return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-800">
         <div className="sticky top-0 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 p-6 flex justify-between items-start">
