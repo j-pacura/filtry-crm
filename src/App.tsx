@@ -668,14 +668,14 @@ const CRMApp = () => {
   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
   <XAxis dataKey="region" stroke="#9CA3AF" />
   <YAxis stroke="#9CA3AF" />
-  <RechartsTooltip
-    contentStyle={{
-      backgroundColor: '#1F2937',
-      border: '1px solid '#374151',
-      borderRadius: '8px',
-      color: '#F9FAFB'
-    }}
-  />
+ <RechartsTooltip
+  contentStyle={{
+    backgroundColor: '#1F2937',
+    border: '1px solid #374151',
+    borderRadius: '8px',
+    color: '#F9FAFB'
+  }}
+/>
   <Bar dataKey="count" fill="url(#colorGradient)" />
   <defs>
     <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
@@ -704,14 +704,14 @@ const CRMApp = () => {
       <Cell key={`cell-${index}`} fill={entry.color} />
     ))}
   </Pie>
-  <RechartsTooltip
-    contentStyle={{
-      backgroundColor: '#1F2937',
-      border: '1px solid #374151',
-      borderRadius: '8px',
-      color: '#F9FAFB'
-    }}
-  />
+ <RechartsTooltip
+  contentStyle={{
+    backgroundColor: '#1F2937',
+    border: '1px solid #374151',
+    borderRadius: '8px',
+    color: '#F9FAFB'
+  }}
+/>
 </RechartsPieChart>
           </ResponsiveContainer>
         </div>
