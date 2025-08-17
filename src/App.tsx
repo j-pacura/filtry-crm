@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { supabase } from './lib/supabase'
 import { 
   Search, Filter, Eye, Globe, Mail, Plus, MapPin, Users, TrendingUp, 
   Building, Phone, Star, ArrowUpDown, Download, BarChart3, PieChart,
