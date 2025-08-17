@@ -28,20 +28,33 @@ const CRMApp = () => {
   const [companies, setCompanies] = useState<any[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(true);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoadingCompanies(true);
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .order('name', { ascending: true });
-      if (!mounted) return;
-      if (!error && data) setCompanies(data);
-      setLoadingCompanies(false);
-    })();
-    return () => { mounted = false; };
-  }, []);
+useEffect(() => {
+  let mounted = true;
+  (async () => {
+    setLoadingCompanies(true);
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (!mounted) return;
+
+    if (error) {
+      console.error('Companies load error:', error);
+      setCompanies([]);
+    } else {
+      // 👇 HOTFIX: jeśli w DB brak "type", ustaw domyślnie na "klient"
+      const normalized = (data ?? []).map((c: any) => ({
+        ...c,
+        type: c.type ?? 'klient',
+      }));
+      setCompanies(normalized);
+    }
+    setLoadingCompanies(false);
+  })();
+  return () => { mounted = false; };
+}, []);
+
 
   const [mapView, setMapView] = useState<{ center: [number, number]; zoom: number }>({
     center: [52.1, 19.4], // środek PL
@@ -83,8 +96,8 @@ const CRMApp = () => {
     return filtered;
   }, [searchTerm, selectedRegion, selectedIndustry, selectedPotential, sortField, sortDirection]);
 
-  const clients = filteredCompanies.filter(c => c.type === 'klient');
-  const partners = filteredCompanies.filter(c => c.type === 'partner');
+const clients = filteredCompanies.filter(c => (c.type ?? 'klient') === 'klient');
+const partners = filteredCompanies.filter(c => (c.type ?? '') === 'partner');
 
   // Statystyki dla dashboard
   const stats = {
