@@ -94,7 +94,8 @@ useEffect(() => {
     }
 
     return filtered;
-  }, [searchTerm, selectedRegion, selectedIndustry, selectedPotential, sortField, sortDirection]);
+ }, [companies, searchTerm, selectedRegion, selectedIndustry, selectedPotential, sortField, sortDirection]);
+
 
 const clients = filteredCompanies.filter(c => (c.type ?? 'klient') === 'klient');
 const partners = filteredCompanies.filter(c => (c.type ?? '') === 'partner');
