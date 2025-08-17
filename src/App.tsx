@@ -390,7 +390,7 @@ return (
       </div>
     </div>
   );
-
+};
   const FiltersBar = () => (
     <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4 mb-6">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
