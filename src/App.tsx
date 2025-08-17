@@ -15,24 +15,6 @@ import {
 
 // TUTAJ WKLEJ POZOSTAŁE DANE
 
-const [companies, setCompanies] = useState<any[]>([]);
-const [loadingCompanies, setLoadingCompanies] = useState(true);
-
-useEffect(() => {
-  let mounted = true;
-  (async () => {
-    setLoadingCompanies(true);
-    const { data, error } = await supabase
-      .from('companies')
-      .select('*')
-      .order('name', { ascending: true });
-    if (!mounted) return;
-    if (!error && data) setCompanies(data);
-    setLoadingCompanies(false);
-  })();
-  return () => { mounted = false; };
-}, []);
-
 const CRMApp = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,6 +25,24 @@ const CRMApp = () => {
   const [reportCompanies, setReportCompanies] = useState([]);
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoadingCompanies(true);
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name', { ascending: true });
+      if (!mounted) return;
+      if (!error && data) setCompanies(data);
+      setLoadingCompanies(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   const [mapView, setMapView] = useState<{ center: [number, number]; zoom: number }>({
     center: [52.1, 19.4], // środek PL
     zoom: 6
