@@ -178,7 +178,10 @@ const CRMApp = () => {
   const [reportCompanies, setReportCompanies] = useState([]);
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
-
+  const [mapView, setMapView] = useState<{ center: [number, number]; zoom: number }>({
+    center: [52.1, 19.4], // środek PL
+    zoom: 6
+  });
   // Filtry i dane
   const regions = [...new Set(companies.map(c => c.region))].filter(Boolean);
   const industries = [...new Set(companies.map(c => c.industry))].filter(Boolean);
