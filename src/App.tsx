@@ -324,14 +324,28 @@ const CRMApp = () => {
             })}
           </div>
 
-          {reportCompanies.length > 0 && (
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-300">Raport: {reportCompanies.length}</span>
-              <button className="px-3 py-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg text-sm hover:shadow-lg transition-all duration-200">
-                <Download className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+         <div className="flex items-center space-x-2">
+  {reportCompanies.length > 0 && (
+    <>
+      <span className="text-sm text-gray-300">Raport: {reportCompanies.length}</span>
+      <button className="px-3 py-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg text-sm hover:shadow-lg transition-all duration-200">
+        <Download className="w-4 h-4" />
+      </button>
+      <span className="w-px h-5 bg-gray-700 mx-2" />
+    </>
+  )}
+
+  <button
+    onClick={async () => {
+      await supabase.auth.signOut()
+      window.location.href = '/login'
+    }}
+    className="px-3 py-1 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors"
+  >
+    Wyloguj
+  </button>
+</div>
+
         </div>
       </div>
     </nav>
