@@ -3,7 +3,7 @@ import { supabase } from './lib/supabase'
 import { 
   Search, Filter, Eye, Globe, Mail, Plus, MapPin, Users, TrendingUp, 
   Building, Phone, Star, ArrowUpDown, Download, BarChart3, PieChart,
-  Target, Zap, ExternalLink, X, CheckCircle, AlertCircle,
+  Target, Zap, ExternalLink, X, CheckCircle, AlertCircle,Users, User,
   Calendar, DollarSign, Briefcase, Map, Database, Settings, Home
 } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip, useMap, useMapEvents } from 'react-leaflet';
