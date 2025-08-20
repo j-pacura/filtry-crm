@@ -28,6 +28,60 @@ const CRMApp = () => {
   const [companies, setCompanies] = useState<any[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(true);
 
+// KTO jest zalogowany (potrzebne do "Moje", meta i mapy)
+const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+useEffect(() => {
+  supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+}, []);
+
+  // ⬇️ META per user/firma: gwiazdka + widziane
+const [metaByCompany, setMetaByCompany] = useState<Record<number, { starred?: boolean; seen_at?: string }>>({});
+
+useEffect(() => {
+  if (!currentUserId) return;
+  (async () => {
+    const { data } = await supabase
+      .from('company_user_meta')
+      .select('company_id, starred, seen_at')
+      .eq('user_id', currentUserId);
+
+    const map: Record<number, { starred?: boolean; seen_at?: string }> = {};
+    (data ?? []).forEach((m: any) => {
+      map[m.company_id] = { starred: !!m.starred, seen_at: m.seen_at };
+    });
+    setMetaByCompany(map);
+  })();
+}, [currentUserId]);
+
+const toggleStar = async (companyId: number) => {
+  if (!currentUserId) return;
+  const next = !metaByCompany[companyId]?.starred;
+  const { error } = await supabase
+    .from('company_user_meta')
+    .upsert(
+      { user_id: currentUserId, company_id: companyId, starred: next },
+      { onConflict: 'user_id,company_id' }
+    );
+  if (!error) {
+    setMetaByCompany(prev => ({ ...prev, [companyId]: { ...(prev[companyId] ?? {}), starred: next } }));
+  }
+};
+
+const markSeen = async (companyId: number) => {
+  if (!currentUserId) return;
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('company_user_meta')
+    .upsert(
+      { user_id: currentUserId, company_id: companyId, seen_at: now },
+      { onConflict: 'user_id,company_id' }
+    );
+  if (!error) {
+    setMetaByCompany(prev => ({ ...prev, [companyId]: { ...(prev[companyId] ?? {}), seen_at: now } }));
+  }
+};
+
+  
 useEffect(() => {
   let mounted = true;
   (async () => {
@@ -178,6 +232,7 @@ const partners = filteredCompanies.filter(c => (c.type ?? '') === 'partner');
               { id: 'clients', label: 'Klienci', icon: Building },
               { id: 'partners', label: 'Partnerzy', icon: Users },
               { id: 'map', label: 'Mapa', icon: Map },
+              { id: 'me', label: 'Moje', icon: User },
               { id: 'strategy', label: 'Strategia', icon: Target }
             ].map(tab => {
               const Icon = tab.icon;
@@ -226,12 +281,14 @@ const partners = filteredCompanies.filter(c => (c.type ?? '') === 'partner');
   );
 
  const CompanyModal = ({ company, onClose }) => {
-     // === UŻYTKOWNIK (do claim) ===
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null))
-  }, [])
+  
 
+  useEffect(() => {
+  // zapis "widziane" dla tej firmy (per użytkownik)
+  markSeen(company.id);
+}, [company.id]);
+
+   
   // === STATUS firmy ===
   const [statusSaving, setStatusSaving] = useState(false)
   const updateStatus = async (newStatus: string) => {
@@ -308,6 +365,21 @@ return (
               }`}>
                 {company.type === 'klient' ? 'Klient' : 'Partner'}
               </span>
+
+      <button
+        onClick={() => toggleStar(company.id)}
+        className={`p-1 rounded border ${metaByCompany[company.id]?.starred
+          ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300'
+          : 'bg-gray-800/50 border-gray-700 text-gray-300'}`}
+        title="Ulubione"
+      >
+        <Star
+          className="w-4 h-4"
+          fill={metaByCompany[company.id]?.starred ? 'currentColor' : 'none'}
+        />
+      </button>
+
+              
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
@@ -323,12 +395,10 @@ return (
       className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-sm text-white"
     >
       <option value="potential">Potencjalny</option>
-      <option value="contacted">Podjęto kontakt</option>
-      <option value="meeting">Spotkanie</option>
-      <option value="offer">Oferta</option>
-      <option value="active">Aktywny</option>
-      <option value="returning">Powracający</option>
-      <option value="lost">Odrzucił ofertę</option>
+      <option value="contacted">Kontakt nawiązany</option>
+      <option value="offer">Oferta wysłana</option>
+      <option value="first_purchase">Pierwszy zakup</option>
+      <option value="client">Klient</option>
     </select>
     {statusSaving && <span className="text-xs text-gray-400">zapisywanie…</span>}
   </div>
@@ -809,57 +879,78 @@ const TrackView: React.FC<{ onChange: (center: [number, number], zoom: number) =
       attribution="&copy; OpenStreetMap contributors"
     />
 
-    {filteredCompanies
-      .filter((c) => typeof c.lat === 'number' && typeof c.lng === 'number')
-      .map((c) => (
-        <CircleMarker
-          key={c.id}
-          center={[c.lat, c.lng]}
-          pathOptions={{ color: c.type === 'klient' ? '#3B82F6' : '#A855F7' }}
-          radius={mapView.zoom >= 10 ? 7 : 5}
-          eventHandlers={{ click: () => setSelectedModal(c) }}
-        >
-          <Tooltip direction="top" offset={[0, -8]}>
+   {filteredCompanies
+  .filter((c) =>
+    typeof c.lat === 'number' &&
+    typeof c.lng === 'number' &&
+    c.is_active !== false // nie pokazuj nieaktywnych
+  )
+  .map((c) => {
+    const meta = metaByCompany[c.id] || {};
+    const isMine = currentUserId && c.owner_id === currentUserId;
+
+    const baseRadius = mapView.zoom >= 10 ? 7 : 5;
+    const radius = baseRadius + (meta.starred ? 2 : 0); // ulubione = większy pin
+
+    const baseStroke = c.type === 'klient' ? '#3B82F6' : '#A855F7';
+    const pathOptions = {
+      color: isMine ? '#10B981' : baseStroke, // moje = zielona obwódka
+      weight: isMine ? 3 : 1,
+      fillColor: baseStroke,
+      fillOpacity: meta.seen_at ? 0.6 : 0.9,  // widziane = lekko przygaszone
+    };
+
+    return (
+      <CircleMarker
+        key={c.id}
+        center={[c.lat, c.lng]}
+        pathOptions={pathOptions}
+        radius={radius}
+        eventHandlers={{ click: () => setSelectedModal(c) }}
+      >
+        <Tooltip direction="top" offset={[0, -8]}>
+          <div style={{ fontWeight: 600 }}>{c.name}</div>
+          <div style={{ fontSize: 12, opacity: 0.85 }}>
+            {c.city}{c.region ? `, ${c.region}` : ''}
+          </div>
+          {c.potential && (
+            <div style={{ fontSize: 12, opacity: 0.85 }}>Potencjał: {c.potential}</div>
+          )}
+        </Tooltip>
+
+        {mapView.zoom >= 9 && (
+          <Tooltip permanent direction="bottom" offset={[0, 10]} className="marker-label">
+            {c.name}
+          </Tooltip>
+        )}
+
+        <Popup>
+          <div style={{ minWidth: 180 }}>
             <div style={{ fontWeight: 600 }}>{c.name}</div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>
               {c.city}{c.region ? `, ${c.region}` : ''}
             </div>
-            {c.potential && (
-              <div style={{ fontSize: 12, opacity: 0.85 }}>Potencjał: {c.potential}</div>
-            )}
-          </Tooltip>
-
-          {mapView.zoom >= 9 && (
-            <Tooltip permanent direction="bottom" offset={[0, 10]} className="marker-label">
-              {c.name}
-            </Tooltip>
-          )}
-
-          <Popup>
-            <div style={{ minWidth: 180 }}>
-              <div style={{ fontWeight: 600 }}>{c.name}</div>
-              <div style={{ fontSize: 12, opacity: 0.8 }}>
-                {c.city}{c.region ? `, ${c.region}` : ''}
-              </div>
-              <div style={{ marginTop: 6 }}>
-                <button
-                  onClick={() => setSelectedModal(c)}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    background: '#2563EB',
-                    color: 'white',
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Szczegóły
-                </button>
-              </div>
+            <div style={{ marginTop: 6 }}>
+              <button
+                onClick={() => setSelectedModal(c)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  background: '#2563EB',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                Szczegóły
+              </button>
             </div>
-          </Popup>
-        </CircleMarker>
-      ))}
+          </div>
+        </Popup>
+      </CircleMarker>
+    );
+  })}
+
   </MapContainer>
 </div>
     </div>
@@ -994,6 +1085,32 @@ const TrackView: React.FC<{ onChange: (center: [number, number], zoom: number) =
       </div>
     </div>
   );
+
+// ⬇️ WSTAW TUTAJ, NAD return CRMApp
+const MyHubView = () => {
+  const myCompanies = companies.filter(c => c.owner_id === currentUserId && c.is_active !== false);
+
+  const [myTasks, setMyTasks] = useState<any[]>([]);
+  useEffect(() => {
+    if (!currentUserId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', currentUserId)
+        .order('due_at', { ascending: true });
+      setMyTasks(data ?? []);
+    })();
+  }, [currentUserId]);
+
+  return (
+    <div className="space-y-6">
+      {/* ...reszta dokładnie jak podałeś... */}
+    </div>
+  );
+};
+
+
 if (loadingCompanies) {
     return (
       <div className="min-h-screen grid place-items-center text-white">
@@ -1007,6 +1124,8 @@ if (loadingCompanies) {
       
       <div className="max-w-7xl mx-auto px-6 py-8">
         {activeTab === 'dashboard' && <DashboardView />}
+
+        {activeTab === 'me' && <MyHubView />}
         
         {activeTab === 'clients' && (
           <div>
@@ -1036,4 +1155,4 @@ if (loadingCompanies) {
   );
 };
 
-export default CRMApp;
+export default ;
