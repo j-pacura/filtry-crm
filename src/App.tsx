@@ -1155,4 +1155,4 @@ if (loadingCompanies) {
   );
 };
 
-export default ;
+export default CRMApp;
