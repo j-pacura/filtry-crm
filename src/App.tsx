@@ -82,16 +82,34 @@ const markSeen = async (companyId: number) => {
 
 
 useEffect(() => {
-  // Używamy lokalnych danych zamiast Supabase (dla testów)
-  setLoadingCompanies(true);
-  setTimeout(() => {
-    const normalized = companiesData.map((c: any) => ({
-      ...c,
-      type: c.type ?? 'klient',
-    }));
-    setCompanies(normalized);
+  let mounted = true;
+  (async () => {
+    setLoadingCompanies(true);
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (!mounted) return;
+
+    if (error) {
+      console.error('Companies load error:', error);
+      // Fallback do lokalnych danych jeśli Supabase nie działa
+      const normalized = companiesData.map((c: any) => ({
+        ...c,
+        type: c.type ?? 'klient',
+      }));
+      setCompanies(normalized);
+    } else {
+      const normalized = (data ?? []).map((c: any) => ({
+        ...c,
+        type: c.type ?? 'klient',
+      }));
+      setCompanies(normalized);
+    }
     setLoadingCompanies(false);
-  }, 100);
+  })();
+  return () => { mounted = false; };
 }, []);
 
 
