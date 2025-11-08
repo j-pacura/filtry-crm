@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { supabase } from './lib/supabase'
-import { 
-  Search, Filter, Eye, Globe, Mail, Plus, MapPin, Users, TrendingUp, 
+import {
+  Search, Filter, Eye, Globe, Mail, Plus, MapPin, Users, TrendingUp,
   Building, Phone, Star, ArrowUpDown, Download, BarChart3, PieChart,
   Target, Zap, ExternalLink, X, CheckCircle, AlertCircle,Users, User,
   Calendar, DollarSign, Briefcase, Map, Database, Settings, Home
@@ -12,8 +12,7 @@ import {
   Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart as RechartsPieChart, Pie, Cell
 } from 'recharts';
-
-// TUTAJ WKLEJ POZOSTAŁE DANE
+import { companiesData } from './data/companiesData';
 
 const CRMApp = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -81,32 +80,18 @@ const markSeen = async (companyId: number) => {
   }
 };
 
-  
+
 useEffect(() => {
-  let mounted = true;
-  (async () => {
-    setLoadingCompanies(true);
-    const { data, error } = await supabase
-      .from('companies')
-      .select('*')
-      .order('name', { ascending: true });
-
-    if (!mounted) return;
-
-    if (error) {
-      console.error('Companies load error:', error);
-      setCompanies([]);
-    } else {
-      // 👇 HOTFIX: jeśli w DB brak "type", ustaw domyślnie na "klient"
-      const normalized = (data ?? []).map((c: any) => ({
-        ...c,
-        type: c.type ?? 'klient',
-      }));
-      setCompanies(normalized);
-    }
+  // Używamy lokalnych danych zamiast Supabase (dla testów)
+  setLoadingCompanies(true);
+  setTimeout(() => {
+    const normalized = companiesData.map((c: any) => ({
+      ...c,
+      type: c.type ?? 'klient',
+    }));
+    setCompanies(normalized);
     setLoadingCompanies(false);
-  })();
-  return () => { mounted = false; };
+  }, 100);
 }, []);
 
 
